@@ -69,8 +69,11 @@ class MammogramSegmentor:
         return tr_f, ts_f, tr_g, ts_g, tr_d, ts_d
 
     def train_models(self, dtr, dts, bg, evaluate=False):
+        print(f"training models for background tissue type {bg}")
         num_clusters = 4
         window_size = 2
+
+        print("fitting kmeans model..")
 
         kmeans_f, target_km = self.models.get_kmeans(dtr, num_clusters, window_size)
 
@@ -83,13 +86,13 @@ class MammogramSegmentor:
         target_gm = float(target_km)
         okay = False
         iou = self.models.get_preds(ind, dts, target_gm, gmm_f, window_size=window_size, draw=True)
-        print("iou", iou)
+        print(f"iou for target label {target_gm} ->{iou}")
 
         while ~okay:
-            target_gm = input(f"please choose cluster label for abnormality between 1 to {num_clusters}")
+            target_gm = input(f"please choose cluster label for abnormality between 1 to {num_clusters} : ")
             target_gm = float(target_gm)
             iou = self.models.get_preds(ind, dts, target_gm, gmm_f, window_size=window_size, draw=True)
-            print("iou", iou)
+            print(f"iou for target label {target_gm} ->{iou}")
             is_okay = input(f"is this okay Y or N")
             is_okay = is_okay.strip()
             if is_okay == 'Y':
@@ -121,7 +124,7 @@ class MammogramSegmentor:
                   len(detected_f) / len(iou_scores_f))
 
             # Specify colors for each bin
-            colors = {'D': 'lightorange', 'G': 'lightyellow', 'F': 'darkseagreen'}
+            colors = {'D': 'orange', 'G': 'yellow', 'F': 'green'}
 
             # Create the histogram with specified colors
             counts, bins, patches = plt.hist(list(iou_scores_f.values()), color=colors[bg], bins=[0, 0.01, 0.2, 1],
@@ -130,7 +133,7 @@ class MammogramSegmentor:
             # Add xlabel and ylabel
             plt.xlabel('Proportion of Overlap')
             plt.ylabel('Number of Images')
-            plt.title(f'Distribution of ROI Overlap For {bg} Tissues')
+            plt.title(f'Distribution of ROI Overlap For {bg} Tissues Using GMM')
 
             # Annotate each bar with its frequency
             for i in range(len(patches)):
@@ -147,6 +150,15 @@ class MammogramSegmentor:
 
             kiou_scores_f = self.models.get_kmeans_ious(dts, window_size, kmeans_f, target_km)
 
+             # Create the histogram with specified colors
+            counts, bins, patches = plt.hist(list(kiou_scores_f.values()), color=colors[bg], bins=[0, 0.01, 0.2, 1],
+                                             edgecolor='black')
+
+            # Add xlabel and ylabel
+            plt.xlabel('Proportion of Overlap')
+            plt.ylabel('Number of Images')
+            plt.title(f'Distribution of ROI Overlap For {bg} Tissues Using K-means')
+
             return gmm_f, kmeans_f, iou_scores_f, kiou_scores_f
 
 
@@ -154,13 +166,15 @@ class MammogramSegmentor:
 if __name__ == '__main__':
     mseg = MammogramSegmentor()
 
+    print("loading data...")
+
     tr_f, ts_f, tr_g, ts_g, tr_d, ts_d = mseg.load_data()
 
-    gmm_f, kmeans_f, iou_scores_f, kiou_scores_f = mseg.train_models(tr_f, ts_f, "F")
+    gmm_f, kmeans_f, iou_scores_f, kiou_scores_f = mseg.train_models(tr_f, ts_f, "F", True)
 
-    gmm_g, kmeans_g, iou_scores_g, kiou_scores_g = mseg.train_models(tr_g, ts_g, "G")
+    gmm_g, kmeans_g, iou_scores_g, kiou_scores_g = mseg.train_models(tr_g, ts_g, "G", True)
 
-    gmm_d, kmeans_d, iou_scores_d, kiou_scores_d = mseg.train_models(tr_d, ts_d, "D")
+    gmm_d, kmeans_d, iou_scores_d, kiou_scores_d = mseg.train_models(tr_d, ts_d, "D", True)
 
     iouscores = [kiou_scores_f, kiou_scores_g, kiou_scores_d, iou_scores_f, iou_scores_g, iou_scores_d]
 

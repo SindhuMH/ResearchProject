@@ -157,7 +157,7 @@ class Models:
 
         Utilities.plot_array(1, 2, [original_image, clustered_img])
 
-        target_km = input(f"please choose cluster label for abnormality between 1 to {num_clusters}")
+        target_km = input(f"please choose cluster label for abnormality between 1 to {num_clusters} : ")
         target_km = float(target_km)
         return kmeans, target_km
 
